@@ -68,7 +68,6 @@ from deepmerge.merger import Merger
 import openllm
 
 from .exceptions import ForbiddenAttributeError
-from .utils import ENV_VARS_TRUE_VALUES
 from .utils import LazyType
 from .utils import ReprMixin
 from .utils import bentoml_cattr
@@ -723,18 +722,18 @@ class _ModelSettingsAttr:
 
 
 def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]):
-    assert cl_.__config__ is not None
+    assert cl_.__config__ is not None, f"'__config__' is required for {cls}."
     if "generation_class" in cl_.__config__:
         raise ValueError(
             "'generation_class' shouldn't be defined in '__config__', rather defining "
             f"all required attributes under '{cl_}.GenerationConfig' instead."
         )
 
-    _cl_name = cl_.__name__.replace("Config", "")
-    _settings_attr = cls.default()
-
     if any(i not in cl_.__config__ for i in {"default_id", "model_ids"}):
         raise ValueError("Either 'default_id' or 'model_ids' are emptied under '__config__' (required fields).")
+
+    _cl_name = cl_.__name__.replace("Config", "")
+    _settings_attr = cls.default()
 
     _settings_attr = attr.evolve(_settings_attr, **t.cast(DictStrAny, cl_.__config__))
 
@@ -753,9 +752,7 @@ def structure_settings(cl_: type[LLMConfig], cls: type[_ModelSettingsAttr]):
 
     # bettertransformer support
     if _settings_attr["bettertransformer"] is None:
-        _final_value_dct["bettertransformer"] = (
-            os.environ.get(env.bettertransformer, str(False)).upper() in ENV_VARS_TRUE_VALUES
-        )
+        _final_value_dct["bettertransformer"] = env.bettertransformer_value
     if _settings_attr["requires_gpu"]:
         # if requires_gpu is True, then disable BetterTransformer for quantization.
         _final_value_dct["bettertransformer"] = False
@@ -879,17 +876,13 @@ _reserved_namespace = {"__config__", "GenerationConfig"}
 
 
 @dataclass_transform(order_default=True, field_specifiers=(attr.field, dantic.Field))
-def __llm_config_transform__(cls: type[LLMConfig]) -> type[LLMConfig]:
-    kwargs: dict[str, t.Any] = {}
-    if hasattr(cls, "GenerationConfig"):
-        kwargs = {k: v for k, v in vars(cls.GenerationConfig).items() if not k.startswith("_")}
+def llm_config_transform(cls: type[LLMConfig]) -> type[LLMConfig]:
     non_intrusive_setattr(
         cls,
         "__dataclass_transform__",
         {
             "order_default": True,
             "field_specifiers": (attr.field, dantic.Field),
-            "kwargs": kwargs,
         },
     )
     return cls
@@ -1265,7 +1258,7 @@ class LLMConfig(_ConfigAttr):
                         if match:
                             set_closure_cell(cell, self._cls)
 
-            return __llm_config_transform__(self._cls)
+            return llm_config_transform(self._cls)
 
         def add_attrs_init(self) -> t.Self:
             self._cls_dict["__attrs_init__"] = codegen.add_method_dunders(

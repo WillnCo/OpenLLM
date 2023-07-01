@@ -239,6 +239,7 @@ def process_transformers_config(
     # this logic below is synonymous to handling `from_pretrained` attrs.
     hub_kwds_names = [
         "cache_dir",
+        "code_revision",
         "force_download",
         "local_files_only",
         "proxies",

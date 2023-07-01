@@ -120,6 +120,7 @@ def configure_logging() -> None:
 
     logging.config.dictConfig(_LOGGING_CONFIG)
 
+
 @functools.lru_cache(maxsize=1)
 def in_notebook() -> bool:
     try:

@@ -50,7 +50,7 @@ def main() -> int:
 
     start_idx, end_idx = processed.index(" " * 4 + START_COMMENT), processed.index(" " * 4 + END_COMMENT)
 
-    lines: list[str]= []
+    lines: list[str] = []
     for keys, ForwardRef in openllm.utils.codegen.get_annotations(ModelSettings).items():
         lines.extend(
             [

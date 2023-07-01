@@ -108,11 +108,14 @@ def is_transformers_supports_agent() -> bool:
 def is_jupyter_available() -> bool:
     return _jupyter_available
 
+
 def is_jupytext_available() -> bool:
     return _jupytext_available
 
+
 def is_notebook_available() -> bool:
     return _notebook_available
+
 
 def is_triton_available() -> bool:
     return _triton_available
